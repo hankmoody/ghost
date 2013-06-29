@@ -34,14 +34,13 @@ class Ghost
             add_character(c.chr)
             play_computers_turn
             break if !validate_computer_input
+            @current_node.print_debug_msg
             print "\n"
         end 
         print "\n"
     end
 
     private
-
-    MIN_LETTER_COUNT = 4
 
     def get_char_from_player
         print "\n\tYou => "
@@ -76,7 +75,7 @@ class Ghost
 
     def will_make_complete_word?(char)
         next_node = @current_node.get_next_node(char)
-        if contains_complete_word?(next_node, @count + 1)
+        if next_node.is_word?
             print " is a valid word! You Lose!"
             return false
         end
@@ -91,13 +90,6 @@ class Ghost
         return true
     end
 
-    def contains_complete_word?(node, count)
-        if node.is_word? && count > MIN_LETTER_COUNT
-            return true
-        end
-        return false
-    end
-
     def add_character(char)
         @current_node = @current_node.get_next_node(char)
         @current_word += char
@@ -105,19 +97,20 @@ class Ghost
     end
 
     def play_computers_turn
-        char_to_play = @current_node.find_optimal_move.to_s
+        n = @current_node.find_optimal_move
+        char_to_play = n.letter
         add_character(char_to_play)
         print "\n\tComputer => "
         print_current_word
     end
 
     def validate_computer_input
-        if contains_complete_word?(@current_node, @count)
+        if @current_node.is_word?
             print "\n\n\tCongratulations! You won!\n"
             return false
         end
 
-        if @count <= MIN_LETTER_COUNT && @current_node.nodes.empty?
+        if @current_node.nodes.empty?
             print " ...no more letters left to form a word"
             return false
         end

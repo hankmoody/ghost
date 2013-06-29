@@ -3,11 +3,13 @@
 # Date: 06/22/2013
 #
 
+MIN_WORD_LENGTH = 4
+
 require_relative 'ghost'
 
 def load_word_list
     print "Loading Dictionary..."
-    dict = Dictionary.new
+    dict = Dictionary.new(MIN_WORD_LENGTH)
     IO.foreach("WORD.LST", sep="\n") do |word|
         dict.add_word(word.chomp) unless word.empty?
     end

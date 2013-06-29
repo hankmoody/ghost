@@ -37,12 +37,13 @@ class NodeBase
 end
 
 class Node < NodeBase
-    attr_accessor :even_distance, :odd_distance
+    attr_accessor :even_distance, :odd_distance, :furthest_word
 
     def initialize(letter = "")
         super(letter)
         @even_distance = 0
         @odd_distance = 0
+        @furthest_word = nil
     end
 
     def add_distance(dist)
@@ -51,6 +52,7 @@ class Node < NodeBase
         else
             @odd_distance += 1
         end
+        @furthest_word = dist if (@furthest_word.nil? || @furthest_word < dist)
     end
 
     def is_pure_even
@@ -61,51 +63,88 @@ class Node < NodeBase
         return odd_distance > 0 && even_distance == 0
     end
 
+    def has_child_words?
+        return (odd_distance + even_distance) > 0
+    end
+
+    def to_s
+        "#{@letter}-#{@even_distance}-#{odd_distance}-#{furthest_word}"
+    end
+
     def find_optimal_move
+        d = get_decision_hash
+
+        if !d[:odds].empty?
+            # Winning move. Return a random symbol from here
+            r = rand (d[:odds].length - 1)
+            return d[:odds][r]
+        end
+
+        if !d[:mixed].empty?
+            # Find the longest word
+            ret = d[:mixed].first
+            d[:mixed].each do |n|
+                ret = n if n.furthest_word > ret.furthest_word
+            end
+            return ret               
+        end
+
+        if !d[:evens].empty?
+            # Find the longest word
+            ret = d[:evens].first
+            d[:evens].each do |n|
+                ret = n if n.furthest_word > n.furthest_word
+            end
+            return ret          
+        end
+
+        if !d[:partials].empty?
+            # Losing move. Return a random symbol
+            r = rand (d[:partials].length - 1)
+            return d[:partials][r]
+        end
+
+        if !d[:words].empty?
+            # Losing move. Return a random symbol
+            r = rand (d[:words].length - 1)
+            return d[:words][r]
+        end
+    end 
+
+    private
+
+    def get_decision_hash 
         pure_evens = Array.new
         pure_odds = Array.new
         mixed = Array.new
         will_word = Array.new
+        partials = Array.new
 
-        @nodes.keys.each do |key|
-            if !@nodes[key].is_word
-                if @nodes[key].is_pure_even
-                    pure_evens.push key
-                elsif @nodes[key].is_pure_odd
-                    pure_odds.push key
+        @nodes.each do |key, n|
+            if !n.is_word?
+                if n.has_child_words?
+                    if n.is_pure_even
+                        pure_evens.push n
+                    elsif n.is_pure_odd
+                        pure_odds.push n
+                    else
+                        mixed.push n
+                    end
                 else
-                    mixed.push key
+                    partials.push n
                 end
             else
-                will_word.push key
+                will_word.push n
             end
-        end
+        end 
 
-        if !pure_evens.empty?
-            # Winning move. Return a random symbol from here
-            r = rand (pure_evens.length - 1)
-            return pure_evens[r]
-        end
-
-        if !mixed.empty?
-            # It could go either way. Return a random symbol from here
-            r = rand (mixed.length - 1)
-            return mixed[r]
-        end
-
-        if !pure_odds.empty?
-            # Losing move. Return symbol with the highest odd value.
-            max_odd = pure_odds.first
-            pure_odds.each do |k|
-                max_odd = k if @nodes[k].odd_distance > @nodes[max_odd].odd_distance
-            end
-            return max_odd
-        end
-
-        if !will_word.empty?
-            # Losing move. Return a random symbol
-            r = rand (will_word.length - 1)
-            return will_word[r]
-        end
-    end 
+        decision_hash = {
+            :evens => pure_evens,
+            :odds => pure_odds,
+            :mixed => mixed,
+            :words => will_word,
+            :partials => partials
+        }
+        return decision_hash
+    end
 end
